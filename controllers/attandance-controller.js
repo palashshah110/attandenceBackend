@@ -25,4 +25,53 @@ const getattandance = async (req,res) =>{
     }
 }
 
-module.exports = { markAttendance,getattandance};
+const getattandanceByRollno = async (req, res) => {
+    try {
+        const { rollno } = req.params;
+
+        // last 5 days including today
+        const days = 5;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const fiveDaysAgo = new Date(today);
+        fiveDaysAgo.setDate(today.getDate() - (days - 1)); // 5 days range
+
+        // Fetch attendance for the last 5 days
+        const attendance = await Attendance.find({
+            rollno,
+            createdAt: { $gte: fiveDaysAgo }
+        });
+
+        // Convert attendance dates to a "YYYY-MM-DD" map
+        const presentDates = new Set(
+            attendance.map(item =>
+                new Date(item.createdAt).toISOString().split("T")[0]
+            )
+        );
+
+        // Build response object → for each day mark Present/Absent
+        let result = [];
+
+        for (let i = 0; i < days; i++) {
+            const dateObj = new Date(today);
+            dateObj.setDate(today.getDate() - i);
+
+            const dateKey = dateObj.toISOString().split("T")[0];
+
+            result.push({
+                date: dateKey,
+                status: presentDates.has(dateKey) ? "Present" : "Absent"
+            });
+        }
+
+        res.status(200).json(result);
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ msg: "Server error", error: error.message });
+    }
+};
+
+
+module.exports = { markAttendance,getattandance,getattandanceByRollno};
